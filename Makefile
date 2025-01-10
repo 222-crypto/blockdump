@@ -10,13 +10,27 @@ help: .gitignore bin/
 
 .PHONY: build # Build the binary
 build: bin/$(APP_NAME)
-bin/$(APP_NAME): go.mod main.go pkg/ $(shell mkdir -p pkg && find pkg | grep -E '\.go$$')
+bin/$(APP_NAME): \
+go.mod \
+block/ \
+$(find block | grep -E '\.go$$') \
+config/ \
+$(find config | grep -E '\.go$$') \
+encoding/ \
+$(find encoding | grep -E '\.go$$') \
+error_handling/ \
+$(find error_handling | grep -E '\.go$$') \
+rpc/ \
+$(find rpc | grep -E '\.go$$') \
+seq \
+$(find seq | grep -E '\.go$$') \
+main.go
 	go build -o bin/$(APP_NAME) .
 
 
 .PHONY: run # Run the binary
 run: build
-	./bin/$(APP_NAME)
+	./bin/$(APP_NAME) --help
 
 
 .gitignore:
