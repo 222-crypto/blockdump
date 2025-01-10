@@ -41,10 +41,10 @@ Connection Options:
        Connect to JSON-RPC on <port> (default: 30174 or testnet: 35715)
 
   -rpcuser=<user>
-       Username for JSON-RPC connections
+       Username for JSON-RPC connections (default: "${BLOCKDUMP_RPC_USER}")
 
   -rpcpassword=<pw>
-       Password for JSON-RPC connections
+       Password for JSON-RPC connections (default: "${BLOCKDUMP_RPC_PASSWORD}")
 
   -rpcclienttimeout=<n>
        Timeout during HTTP requests (default: 900)
@@ -147,6 +147,8 @@ func DefaultCommandLineConfig() *CommandLineConfig {
 		RPCConfig: &RPCConfig{
 			Connect:         "127.0.0.1",
 			Port:            30174, // Default mainnet port
+			User:            os.Getenv("BLOCKDUMP_RPC_USER"),
+			Password:        os.Getenv("BLOCKDUMP_RPC_PASSWORD"),
 			ClientTimeout:   900 * time.Second,
 			RetryLimit:      3,
 			RetryBackoffMax: 300 * time.Second,
@@ -166,9 +168,9 @@ func ParseConfig() (*CommandLineConfig, error) {
 		"Send commands to node running on <ip>")
 	flag.IntVar(&config.Port, "rpcport", config.Port,
 		"Connect to JSON-RPC on <port>")
-	flag.StringVar(&config.User, "rpcuser", config.User,
+	flag.StringVar(&config.User, "rpcuser", "${BLOCKDUMP_RPC_USER}",
 		"Username for JSON-RPC connections")
-	flag.StringVar(&config.Password, "rpcpassword", config.Password,
+	flag.StringVar(&config.Password, "rpcpassword", "${BLOCKDUMP_RPC_PASSWORD}",
 		"Password for JSON-RPC connections")
 	flag.DurationVar(&config.ClientTimeout, "rpcclienttimeout", config.ClientTimeout,
 		"Timeout during HTTP requests (seconds)")
