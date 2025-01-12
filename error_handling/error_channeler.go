@@ -40,12 +40,6 @@ func (self *ErrorChanneler) ErrorChannel() chan error {
 	return self.error_channel
 }
 
-func (self *ErrorChanneler) SetErrorChannel(error_channel chan error) {
-	self.error_channel_mu.Lock()
-	defer self.error_channel_mu.Unlock()
-	self.error_channel = error_channel
-}
-
 func (self *ErrorChanneler) RErrorChannel() <-chan error {
 	return self.ErrorChannel()
 }
