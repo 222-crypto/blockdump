@@ -50,3 +50,10 @@ main.go:
 		| tr '-' '\n' \
 		| tr "'" '"' \
 		> main.go
+
+
+LICENSE:
+	curl -s "https://ebible.org/usfx/LICENSING.txt" > LICENSE
+	diff <(sha512sum LICENSE) \
+		 <(echo "b55c6b627094c0bc50fc43f5be1a7a7f1a3681087bf57cf456f2111646b1360689051434b54aca241878074442522fd99a59207fb56c89388c6b1bd80691aadc  LICENSE") \
+	;
