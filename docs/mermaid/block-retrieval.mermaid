@@ -1,0 +1,16 @@
+stateDiagram-v2
+    [*] --> ValidateRequest: User Input
+    ValidateRequest --> GetBlockHash: Valid Block ID
+    ValidateRequest --> [*]: Invalid Block ID
+    
+    GetBlockHash --> FetchData: Hash Retrieved
+    
+    state FetchData {
+        [*] --> BlockReader: Get Raw Data
+        [*] --> BlockJSON: Get Metadata
+        BlockReader --> DataComplete
+        BlockJSON --> DataComplete
+    }
+    
+    FetchData --> CreateBlock: All Data Retrieved
+    CreateBlock --> [*]: Return Block

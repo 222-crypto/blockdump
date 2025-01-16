@@ -1,0 +1,46 @@
+sequenceDiagram
+    participant C as Client
+    participant BD as BlockDump
+    participant F as BlockFactory
+    participant RPC as CLAMBasicBChainRPC
+    participant B as Block
+    
+    C->>BD: SpecificBlock(ctx, blockID)
+    activate BD
+    
+    BD->>RPC: GetBlockhash(ctx, blockID)
+    activate RPC
+    RPC-->>BD: blockhash
+    deactivate RPC
+    
+    BD->>F: LookupBlockFromHash(ctx, hash, rpc)
+    activate F
+    
+    par Fetch Block Data
+        F->>RPC: GetBlockReader(ctx, hash)
+        activate RPC
+        RPC-->>F: io.Reader
+        deactivate RPC
+    and Fetch Block Metadata
+        F->>RPC: GetBlockJSON(ctx, hash)
+        activate RPC
+        RPC-->>F: blockJSON
+        deactivate RPC
+    end
+    
+    F->>B: Create Block Instance
+    activate B
+    
+    B->>B: Initialize error channels
+    B->>B: Set block properties
+    
+    B-->>F: IBlock instance
+    deactivate B
+    
+    F-->>BD: IBlock instance
+    deactivate F
+    
+    BD-->>C: IBlock instance
+    deactivate BD
+
+    Note over C,B: Block ready for encoding/decoding operations

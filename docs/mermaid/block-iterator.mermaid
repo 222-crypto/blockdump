@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant C as Client
+    participant I as Iterator
+    participant R as RPC
+    participant F as BlockFactory
+    
+    C->>I: Request Block Range
+    activate I
+    
+    loop For Each Block ID
+        I->>R: GetBlockhash
+        R-->>I: Return Hash
+        
+        I->>F: Create Block
+        F->>R: Get Block Data
+        R-->>F: Return Data
+        F-->>I: Return Block
+        
+        I-->>C: Yield Block
+    end
+    
+    deactivate I

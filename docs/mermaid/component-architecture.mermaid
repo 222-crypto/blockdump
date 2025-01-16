@@ -1,0 +1,26 @@
+graph TB
+    subgraph CLI["Command Line Interface"]
+        Main["main.go<br/>Entry Point"]
+        Config["config.go<br/>Configuration"]
+    end
+    
+    subgraph Core["Core Components"]
+        BlockDump["block/dump.go<br/>Block Operations"]
+        Factory["block/factory.go<br/>Block Creation"]
+        Iterator["block/iterator.go<br/>Block Iteration"]
+        Sequence["block/sequence.go<br/>Block Sequences"]
+    end
+    
+    subgraph RPC["RPC Layer"]
+        RPCInterface["rpc/interface.go<br/>RPC Contract"]
+        ClamRPC["rpc/clamrpc/clamrpc.go<br/>CLAM Implementation"]
+    end
+    
+    Main --> Config
+    Main --> BlockDump
+    BlockDump --> Factory
+    BlockDump --> Iterator
+    BlockDump --> Sequence
+    Iterator --> RPCInterface
+    Factory --> RPCInterface
+    RPCInterface --> ClamRPC

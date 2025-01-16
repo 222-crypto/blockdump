@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant C as Client
+    participant E as ErrorChanneler
+    participant P as PipeWriter
+    participant F as FallbackHandler
+    
+    C->>E: Send Error
+    
+    alt Channel Available
+        E->>E: Send to Channel
+    else Channel Busy/Unavailable
+        E->>F: Execute Fallback
+        F->>P: CloseWithError
+        opt Panic Enabled
+            F->>F: Panic with Error
+        end
+    end

@@ -1,0 +1,80 @@
+flowchart TD
+    %% Top Level Interface
+    IBlockDump[[IBlockDump]]
+    
+    %% Discovery Layer
+    IBlockIterator[[IBlockIterator]]
+    IBasicBChainRPC[[IBasicBChainRPC]]
+    
+    %% Construction Layer
+    IBlockFactory[[IBlockFactory]]
+    IBlockLookup[[IBlockLookup]]
+    
+    %% Block Layer
+    IBlock[[IBlock]]
+    
+    %% Encoding Layer
+    Encoder[[Encoder]]
+    Decoder[[Decoder]]
+    IErrorChanneler[[IErrorChanneler]]
+    SeqEncoder[[SeqEncoder]]
+
+    %% Core Flow
+    IBlockDump -->|"GetBlocksByRange(start, end)"| IBlockIterator
+    IBlockIterator -->|"iter.Seq2[string, error]"| IBlockDump
+    
+    IBlockIterator -->|"GetBlockhash"| IBasicBChainRPC
+    IBasicBChainRPC -->|"Block Hashes"| IBlockIterator
+    
+    IBlockDump -->|"LookupBlockFromHash"| IBlockFactory
+    IBlockFactory -->|"Returns IBlock"| IBlockDump
+    
+    IBlockFactory -->|"GetBlockReader/JSON"| IBasicBChainRPC
+    IBasicBChainRPC -->|"io.Reader + metadata"| IBlockFactory
+    
+    %% Block Relations
+    IBlock -->|"Parent(ctx)"| IBlockLookup
+    IBlockLookup -->|"Returns IBlock"| IBlock
+    
+    %% Interface Implementation Relations
+    IBlock -.->|"implements"| Encoder
+    IBlock -.->|"implements"| Decoder
+    SeqEncoder -.->|"extends"| Encoder
+    SeqEncoder -.->|"extends"| Decoder
+    
+    %% Error Handling
+    IBlock -.->|"implements"| IErrorChanneler
+    SeqEncoder -.->|"implements"| IErrorChanneler
+
+    %% Layer Labels
+    subgraph Orchestration Layer
+        IBlockDump
+    end
+    
+    subgraph Discovery Layer
+        IBlockIterator
+        IBasicBChainRPC
+    end
+    
+    subgraph Construction Layer
+        IBlockFactory
+        IBlockLookup
+    end
+    
+    subgraph Data Layer
+        IBlock
+    end
+    
+    subgraph Encoding Layer
+        Encoder
+        Decoder
+        SeqEncoder
+        IErrorChanneler
+    end
+
+    %% Styling
+    classDef interface fill:#e6f3ff,stroke:#2c5282,stroke-width:2px,color:#2c5282
+    classDef layer fill:#fff5f5,stroke:#822727,stroke-width:1px,color:#822727,opacity:0.3
+
+    class IBlockDump,IBlockIterator,IBasicBChainRPC,IBlockFactory,IBlockLookup,IBlock,Encoder,Decoder,SeqEncoder,IErrorChanneler interface
+    class Orchestration,Discovery,Construction,Data,Encoding layer

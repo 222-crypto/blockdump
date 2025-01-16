@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> InitialRequest
+    
+    InitialRequest --> Success: Request OK
+    InitialRequest --> BackoffCalculation: Request Failed
+    
+    BackoffCalculation --> RetryCheck: Calculate Backoff
+    RetryCheck --> WaitState: Under Limit
+    RetryCheck --> FailureState: Exceeds Limit
+    
+    WaitState --> InitialRequest: Retry After Delay
+    
+    Success --> [*]: Return Result
+    FailureState --> [*]: Return Error
