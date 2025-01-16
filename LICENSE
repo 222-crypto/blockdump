@@ -1,3 +1,29 @@
+                      Base64 Labs Inc. Public License
+                             Version 1.0, 2025
+
+                      Copyright 2025, Base64 Labs Inc.
+                            All rights reserved.
+
+    NOTICE OF LICENSING STRUCTURE:
+    This software is released by Base64 Labs Inc. under a dual-licensing structure
+    similar to that used by SIL International. The following terms describe how
+    this dual-licensing structure applies to this software.
+
+    This header introduces our terms, followed by the complete text of the SIL
+    International dual-license agreement, which is incorporated by reference
+    and applies to this software as specified below.
+
+    TERMS OF USE:
+    By using, modifying, or distributing this software or any portion thereof,
+    you accept and agree to be bound by the terms of either license option as
+    presented in the SIL International dual-license agreement that follows.
+
+
+:: SIL International License Text
+---
+source: https://ebible.org/usfx/LICENSING.txt
+sha512: b55c6b627094c0bc50fc43f5be1a7a7f1a3681087bf57cf456f2111646b1360689051434b54aca241878074442522fd99a59207fb56c89388c6b1bd80691aadc
+body: |
 		   Copyright 1999-2001, SIL International
 			    All rights reserved.
 
