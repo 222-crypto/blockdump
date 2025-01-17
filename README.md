@@ -43,7 +43,8 @@ go install
 
 #### FYI
 ```
-It is wise to have a dedicated node for block-data RPC access, distinct from your wallet or mining node.
+It is wise to have a dedicated node for block-data RPC access,
+distinct from your wallet or mining node.
 ```
 
 Before using blockdump, set up your RPC credentials:
