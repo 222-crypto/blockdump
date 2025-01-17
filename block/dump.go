@@ -10,7 +10,6 @@ import (
 	"github.com/222-crypto/blockdump/v2/block/constants"
 	"github.com/222-crypto/blockdump/v2/encoding"
 	"github.com/222-crypto/blockdump/v2/rpc"
-	"github.com/222-crypto/blockdump/v2/seq"
 )
 
 type IBlockDump interface {
@@ -132,26 +131,20 @@ func (self *BlockDump) BlockRange(ctx context.Context, start, end int) (encoding
 
 	// Create a sequence that will stream blocks as they're fetched
 	blockSeq := iter.Seq2[IBlock, error](func(yield func(IBlock, error) bool) {
-		// Get block hashes for the range
-		hashSeq := self.iterator.GetBlocksByRange(ctx, start, end)
-
-		// Wrap sequence in a channel to range over hash/error pairs
-		hashChan := seq.ChanSeq2Results(hashSeq)
-
 		// Process each hash in the sequence
-		for result := range hashChan {
+		for result, err := range self.iterator.GetBlocksByRange(ctx, start, end) {
 			// Check for hash retrieval errors
-			if result.Err != nil {
-				if !yield(nil, fmt.Errorf("failed to get block hash: %w", result.Err)) {
+			if err != nil {
+				if !yield(nil, fmt.Errorf("failed to get block hash: %w", err)) {
 					return
 				}
 				continue
 			}
 
 			// Create block from hash using the factory
-			block, err := self.block_factory.LookupBlockFromHash(ctx, result.Val, self.rpc)
+			block, err := self.block_factory.LookupBlockFromHash(ctx, result, self.rpc)
 			if err != nil {
-				if !yield(nil, fmt.Errorf("failed to create block from hash %s: %w", result.Val, err)) {
+				if !yield(nil, fmt.Errorf("failed to create block from hash %s: %w", result, err)) {
 					return
 				}
 				continue

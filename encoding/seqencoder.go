@@ -11,4 +11,5 @@ type SeqEncoder[T any] interface {
 	error_handling.IReceiveErrorChanneler // shared by Seq and Encoder
 	Decoder[SeqEncoder[T]]
 	Seq() iter.Seq[T]
+	Seq2() iter.Seq2[T, error]
 }

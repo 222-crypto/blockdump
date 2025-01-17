@@ -33,6 +33,13 @@ func (self *BlockSequence) RErrorChannel() <-chan error {
 	return self.ec.RErrorChannel()
 }
 
+// Seq2 returns the underlying block sequence iterator with error propagation.
+// This method satisfies the SeqEncoder interface requirement and provides direct
+// access to the error-aware sequence.
+func (self *BlockSequence) Seq2() iter.Seq2[IBlock, error] {
+	return self.seq
+}
+
 // Seq returns the underlying block sequence iterator, propagating errors
 // through the error channel using SendError.
 func (self *BlockSequence) Seq() iter.Seq[IBlock] {

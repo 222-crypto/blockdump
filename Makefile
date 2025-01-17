@@ -22,8 +22,6 @@ error_handling/ \
 $(find error_handling | grep -E '\.go$$') \
 rpc/ \
 $(find rpc | grep -E '\.go$$') \
-seq \
-$(find seq | grep -E '\.go$$') \
 main.go
 	go build -o bin/$(APP_NAME) .
 
