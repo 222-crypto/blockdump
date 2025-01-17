@@ -97,10 +97,98 @@ The Blockdump library provides two main ways to work with blocks:
 
 This example demonstrates how to connect to a CLAM node and retrieve blocks using secure credential handling:
 ```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/222-crypto/blockdump/v2/block"
+	"github.com/222-crypto/blockdump/v2/rpc"
+	"github.com/222-crypto/blockdump/v2/rpc/clamrpc"
+)
+
+const DEV_MODE = true
+
+func main() {
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Start with default configuration which automatically reads from environment variables:
+	// - BLOCKDUMP_RPC_USER
+	// - BLOCKDUMP_RPC_PASSWORD
+	config := rpc.DefaultRPCConfig(rpc.BLOCKCHAIN_CLAM)
+
+	// Optionally override non-sensitive defaults if needed
+	config.Connect = "localhost"                     // Default is 127.0.0.1
+	config.Port = 30174                              // Default CLAM mainnet port
+
+	// For development/testing, you might want shorter timeouts
+	if DEV_MODE {
+		config.ClientTimeout = 5 * time.Second
+		config.RetryBackoffMax = 3 * time.Second
+	}
+
+	// Initialize CLAM RPC client
+	rpcClient, err := clamrpc.NewCLAMBasicBChainRPC(&config)
+	if err != nil {
+		log.Fatal("Failed to create RPC client:", err)
+	}
+
+	// Create block iterator
+	iterator := block.NewBlockIterator(rpcClient)
+
+	// Initialize BlockDump with the RPC client and iterator
+	dumper, err := block.NewBlockDump(rpcClient, iterator)
+	if err != nil {
+		log.Fatal("Failed to create block dumper:", err)
+	}
+
+	// Example 1: Get the genesis block
+	genesis, err := dumper.GenesisBlock(ctx)
+	if err != nil {
+		log.Fatal("Failed to get genesis block:", err)
+	}
+	fmt.Printf("Genesis block: %s, length=%d\n", genesis.Hash(), len(genesis.Bytes()))
+
+	// Example 2: Get a range of blocks and process them
+	start_block := 212
+	end_block := 222
+	blocks, err := dumper.BlockRange(ctx, start_block, end_block)
+	if err != nil {
+		log.Fatal("Failed to get block range:", err)
+	}
+
+	// Process blocks in the sequence
+	for block, err := range blocks.Seq2() {
+		if err != nil {
+			log.Fatal("Failed to get block:", err)
+		}
+		fmt.Printf("Block [%d/%d] hash: %s, length=%d\n", block.ID(), end_block, block.Hash(), len(block.Bytes()))
+	}
+
+	// Example 3: Get a random sample of blocks
+	sample, err := dumper.RandomBlockSample(ctx, 5)
+	if err != nil {
+		log.Fatal("Failed to get random sample:", err)
+	}
+
+	for block, err := range sample.Seq2() {
+		if err != nil {
+			log.Fatal("Failed to get block:", err)
+		}
+
+		fmt.Printf("Random block %d hash: %s, length=%d\n", block.ID(), block.Hash(), len(block.Bytes()))
+	}
+}
 ```
 
 #### Processing Saved Block Data
 
 This example shows how to work with previously saved block data files:
 ```go
+# TODO
 ```
