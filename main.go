@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/222-crypto/blockdump/v2/block"
 	"github.com/222-crypto/blockdump/v2/config"
@@ -16,7 +17,7 @@ import (
 	"github.com/222-crypto/blockdump/v2/rpc/clamrpc"
 )
 
-/* blockdump
+const USAGE = `
 blockdump is a command-line utility for dumping blocks via gen1 Blockchain RPC.
 
 Supported cryptocurrencies:
@@ -61,7 +62,7 @@ Commands:
       blockrange <start> <end> - Retrieve a range of blocks by ID
                    randomblock - Retrieve a random block from the blockchain
 randomblocksample <samplesize> - Retrieve a random sample of blocks
-*/
+`
 
 // Command represents the subcommand to execute
 type Command struct {
@@ -93,7 +94,7 @@ func DefaultCommandLineConfig() *CommandLineConfig {
 }
 
 // replacePlaceHolders replaces placeholder values in the RPC configuration
-// with their default values if they are set to their placeholder values
+// with their default values if placeholder values are detected.
 func replacePlaceHolders(rpc_config *rpc.RPCConfig) {
 	default_config := DefaultCommandLineConfig()
 
@@ -106,68 +107,163 @@ func replacePlaceHolders(rpc_config *rpc.RPCConfig) {
 	}
 }
 
-// ParseConfig parses command-line arguments and returns a filled Config
-func ParseConfig() (*CommandLineConfig, error) {
+// parseFlags handles custom flag parsing to support both single and double dash flags
+func parseFlags(args []string) (*CommandLineConfig, []string, error) {
 	config := DefaultCommandLineConfig()
+	remainingArgs := make([]string, 0)
 
-	// Define flags
-	flag.StringVar(&config.Connect, "rpcconnect", config.Connect,
-		"Send commands to node running on <ip>")
-	flag.IntVar(&config.Port, "rpcport", config.Port,
-		"Connect to JSON-RPC on <port>")
-	flag.StringVar(&config.User, "rpcuser", "${BLOCKDUMP_RPC_USER}",
-		"Username for JSON-RPC connections")
-	flag.StringVar(&config.Password, "rpcpassword", "${BLOCKDUMP_RPC_PASSWORD}",
-		"Password for JSON-RPC connections")
-	flag.DurationVar(&config.ClientTimeout, "rpcclienttimeout", config.ClientTimeout,
-		"Timeout during HTTP requests (seconds)")
-	flag.IntVar(&config.RetryLimit, "rpcretrylimit", config.RetryLimit,
-		"Retry limit for JSON-RPC requests")
-	flag.DurationVar(&config.RetryBackoffMax, "rpcretrybackoffmax", config.RetryBackoffMax,
-		"Maximum backoff time for JSON-RPC retries (seconds)")
-	flag.DurationVar(&config.RetryBackoffMin, "rpcretrybackoffmin", config.RetryBackoffMin,
-		"Minimum backoff time for JSON-RPC retries (seconds)")
+	i := 0
+	for i < len(args) {
+		arg := args[i]
 
-	// Output flags
-	flag.BoolVar(&config.BinaryOutput, "b", config.BinaryOutput,
-		"Use binary output format (default: false)")
-	flag.StringVar(&config.OutputFile, "f", config.OutputFile,
-		"Output file (default: stdout)")
+		// Handle help flag specially
+		if arg == "-h" || arg == "--help" {
+			printUsage()
+			os.Exit(0)
+		}
 
-	// Custom usage function to show our specific help
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: blockdump [connection-options] -[b] -[f <file>] <subcommand> [<args>]\n\n")
-		fmt.Fprintf(os.Stderr, "Supported cryptocurrencies:\n")
-		fmt.Fprintf(os.Stderr, " * CLAM (Clamcoin)\n\n")
-		fmt.Fprintf(os.Stderr, "Connection Options:\n")
-		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nCommands:\n")
-		fmt.Fprintf(os.Stderr, "                  genesisblock - Retrieve the first block in the blockchain\n")
-		fmt.Fprintf(os.Stderr, "                     allblocks - Retrieve all blocks in the blockchain\n")
-		fmt.Fprintf(os.Stderr, "            specificblock <id> - Retrieve a specific block by ID\n")
-		fmt.Fprintf(os.Stderr, "      blockrange <start> <end> - Retrieve a range of blocks by ID\n")
-		fmt.Fprintf(os.Stderr, "                   randomblock - Retrieve a random block from the blockchain\n")
-		fmt.Fprintf(os.Stderr, "randomblocksample <samplesize> - Retrieve a random sample of blocks\n")
+		// Handle flags that start with - or --
+		if strings.HasPrefix(arg, "-") {
+			// Strip leading dashes and handle the flag
+			flag := strings.TrimLeft(arg, "-")
+
+			// Handle combined flags (only supported with single dash)
+			if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") {
+				if flag == "fb" || flag == "bf" {
+					config.BinaryOutput = true
+					i++
+					if i >= len(args) {
+						return nil, nil, fmt.Errorf("missing filename after -%s flag", flag)
+					}
+					config.OutputFile = args[i]
+					i++
+					continue
+				}
+			}
+
+			// Handle flags with values after =
+			if strings.Contains(flag, "=") {
+				parts := strings.SplitN(flag, "=", 2)
+				flag = parts[0]
+				value := parts[1]
+
+				// Handle RPC flags
+				if strings.HasPrefix(flag, "rpc") {
+					if err := setRPCOption(config, flag, value); err != nil {
+						return nil, nil, err
+					}
+					i++
+					continue
+				}
+			}
+
+			// Handle standalone flags
+			switch flag {
+			case "f", "file":
+				i++
+				if i >= len(args) {
+					return nil, nil, fmt.Errorf("missing filename after %s flag", arg)
+				}
+				config.OutputFile = args[i]
+			case "b", "binary":
+				config.BinaryOutput = true
+			case "help":
+				printUsage()
+				os.Exit(0)
+			default:
+				if strings.HasPrefix(flag, "rpc") {
+					// Handle RPC flags without = (assuming value is next argument)
+					i++
+					if i >= len(args) {
+						return nil, nil, fmt.Errorf("missing value for %s flag", arg)
+					}
+					if err := setRPCOption(config, flag, args[i]); err != nil {
+						return nil, nil, err
+					}
+				} else {
+					return nil, nil, fmt.Errorf("unknown flag: %s", arg)
+				}
+			}
+		} else {
+			// Non-flag argument - add to remaining args
+			remainingArgs = append(remainingArgs, arg)
+		}
+		i++
 	}
 
-	// Parse flags
-	flag.Parse()
+	replacePlaceHolders(config.RPCConfig)
 
-	// Handle remaining arguments as command and its arguments
-	args := flag.Args()
-	if len(args) == 0 {
-		flag.Usage()
+	return config, remainingArgs, nil
+}
+
+// setRPCOption handles setting individual RPC configuration options
+func setRPCOption(config *CommandLineConfig, flag string, value string) error {
+	switch flag {
+	case "rpcconnect":
+		config.Connect = value
+	case "rpcport":
+		port, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("invalid port number: %s", value)
+		}
+		config.Port = port
+	case "rpcuser":
+		config.User = value
+	case "rpcpassword":
+		config.Password = value
+	case "rpcclienttimeout":
+		timeout, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("invalid timeout value: %s", value)
+		}
+		config.ClientTimeout = time.Duration(timeout) * time.Second
+	case "rpcretrylimit":
+		limit, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("invalid retry limit: %s", value)
+		}
+		config.RetryLimit = limit
+	case "rpcretrybackoffmax":
+		max, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("invalid max backoff: %s", value)
+		}
+		config.RetryBackoffMax = time.Duration(max) * time.Second
+	case "rpcretrybackoffmin":
+		min, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("invalid min backoff: %s", value)
+		}
+		config.RetryBackoffMin = time.Duration(min) * time.Second
+	default:
+		return fmt.Errorf("unknown RPC flag: %s", flag)
+	}
+	return nil
+}
+
+// ParseConfig parses command-line arguments and returns a filled Config
+func ParseConfig() (*CommandLineConfig, error) {
+	// Skip the program name
+	args := os.Args[1:]
+
+	// Parse flags and get remaining arguments
+	config, remainingArgs, err := parseFlags(args)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the command from remaining arguments
+	if len(remainingArgs) == 0 {
+		printUsage()
 		return nil, fmt.Errorf("no command specified")
 	}
 
 	// Parse the command
-	cmd, err := parseCommand(args)
+	cmd, err := parseCommand(remainingArgs)
 	if err != nil {
 		return nil, err
 	}
 	config.Command = cmd
-
-	replacePlaceHolders(config.RPCConfig)
 
 	// Validate the configuration
 	if err := validateConfig(config); err != nil {
@@ -175,6 +271,10 @@ func ParseConfig() (*CommandLineConfig, error) {
 	}
 
 	return config, nil
+}
+
+func printUsage() {
+	fmt.Fprintf(os.Stderr, USAGE)
 }
 
 // parseCommand parses the command and its arguments from the remaining command-line args
