@@ -69,7 +69,7 @@ operations. Output can be directed to files (-f flag) and
 formatted as binary (-b flag) or hexadecimal text:
 
 ```bash
-# Get a random block and output as text to stdout
+# Get a random block and output as hexadecimal text to stdout
 blockdump randomblock
 
 # Get a specific block by ID and save as text file
