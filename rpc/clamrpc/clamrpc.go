@@ -95,7 +95,7 @@ func (self *CLAMBasicBChainRPC) UpdateConfig(update func() rpc.RPCConfig) error 
 
 // BasicConfig returns the default configuration of the RPC client
 func (self *CLAMBasicBChainRPC) BasicConfig() rpc.RPCConfig {
-	return rpc.DefaultRPCConfig()
+	return rpc.DefaultRPCConfig(rpc.BLOCKCHAIN_CLAM)
 }
 
 // GetBestBlockhash retrieves the hash of the best (most recent) block in the CLAM blockchain.

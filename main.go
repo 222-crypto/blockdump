@@ -84,7 +84,7 @@ type CommandLineConfig struct {
 
 // DefaultCommandLineConfig returns a CommandLineConfig with default values set
 func DefaultCommandLineConfig() *CommandLineConfig {
-	rpc_config := rpc.DefaultRPCConfig()
+	rpc_config := rpc.DefaultRPCConfig(rpc.BLOCKCHAIN_CLAM) // hardcoded to CLAM, for now
 
 	return &CommandLineConfig{
 		RPCConfig:    &rpc_config,

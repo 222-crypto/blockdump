@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -41,15 +42,24 @@ type IBasicBChainRPC interface {
 	IsValidBlockID(ctx context.Context, id int) (bool, error)
 }
 
-func DefaultRPCConfig() RPCConfig {
-	return RPCConfig{
-		Connect:         "127.0.0.1",
-		Port:            30174, // Default mainnet port
-		User:            os.Getenv("BLOCKDUMP_RPC_USER"),
-		Password:        os.Getenv("BLOCKDUMP_RPC_PASSWORD"),
-		ClientTimeout:   900 * time.Second,
-		RetryLimit:      3,
-		RetryBackoffMax: 300 * time.Second,
-		RetryBackoffMin: 1 * time.Second,
+const BLOCKCHAIN_CLAM = "clam"
+
+func DefaultRPCConfig(blockchain string) (rpc_config RPCConfig) {
+	switch blockchain {
+
+	case BLOCKCHAIN_CLAM:
+		return RPCConfig{
+			Connect:         "127.0.0.1",
+			Port:            30174, // Default mainnet port
+			User:            os.Getenv("BLOCKDUMP_RPC_USER"),
+			Password:        os.Getenv("BLOCKDUMP_RPC_PASSWORD"),
+			ClientTimeout:   900 * time.Second,
+			RetryLimit:      3,
+			RetryBackoffMax: 300 * time.Second,
+			RetryBackoffMin: 1 * time.Second,
+		}
+
 	}
+
+	panic(fmt.Errorf("Unknown blockchain: %s", blockchain))
 }
