@@ -94,7 +94,7 @@ The Blockdump library provides two main ways to work with blocks:
  - By fetching them directly from a blockchain node.
  - By processing previously saved block data from files.
 
-#### Fetching Blocks from Node
+#### Fetching Blocks from an RPC Node
 
 This example demonstrates how to connect to a CLAM node and retrieve blocks using secure credential handling:
 ```go
