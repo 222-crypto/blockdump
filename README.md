@@ -9,7 +9,7 @@ Blockdump offers several powerful capabilities for blockchain data extraction an
 - Efficient block retrieval with streaming support (iter.Seq2)
 - Flexible block range selection for targeted data extraction
 - Command-line interface for easy integration into scripts and workflows
-- Go library for programmatic access to blockchain data
+- Go library for programmatic access to raw blockchain data
 - Built-in retry mechanism with exponential backoff for reliable operation
 - Comprehensive error handling with detailed error context
 - Configurable output formats (binary or text)
