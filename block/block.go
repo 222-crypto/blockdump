@@ -227,19 +227,34 @@ func (self *Block) Encode() io.Reader {
 }
 
 func (self *Block) Decode(r io.Reader) (IBlock, error) {
-	// Read the total block size
-	var size uint32
-	if err := binary.Read(r, binary.LittleEndian, &size); err != nil {
+	// Read total block size
+	var totalSize uint32
+	if err := binary.Read(r, binary.LittleEndian, &totalSize); err != nil {
 		return nil, fmt.Errorf("failed to read block size: %w", err)
 	}
 
-	// Read the complete BSON document
-	bsonData := make([]byte, size)
-	if _, err := io.ReadFull(r, bsonData); err != nil {
-		return nil, fmt.Errorf("failed to read block data: %w", err)
+	// Read BSON size and verify it matches total size
+	var bsonSize uint32
+	if err := binary.Read(r, binary.LittleEndian, &bsonSize); err != nil {
+		return nil, fmt.Errorf("failed to read BSON size: %w", err)
 	}
 
-	// Unmarshal the BSON data
+	// They should match since the entire block is one BSON document
+	if bsonSize != totalSize {
+		return nil, fmt.Errorf("mismatched sizes: block=%d, bson=%d", totalSize, bsonSize)
+	}
+
+	// Now read the actual BSON document
+	// First put back the size we read since it's part of the BSON doc
+	bsonData := make([]byte, bsonSize)
+	binary.LittleEndian.PutUint32(bsonData[0:4], bsonSize)
+
+	// Read the rest of the document
+	if _, err := io.ReadFull(r, bsonData[4:]); err != nil {
+		return nil, fmt.Errorf("failed to read BSON data: %w", err)
+	}
+
+	// Unmarshal the complete BSON document
 	var decoded struct {
 		ID         int    `bson:"i"`
 		Hash       string `bson:"h"`
@@ -248,10 +263,9 @@ func (self *Block) Decode(r io.Reader) (IBlock, error) {
 	}
 
 	if err := bson.Unmarshal(bsonData, &decoded); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal block data: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal BSON data: %w", err)
 	}
 
-	// Create and return a new Block instance
 	return NewBlock(
 		decoded.ID,
 		decoded.Hash,
