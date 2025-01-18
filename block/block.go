@@ -179,6 +179,14 @@ func (self *Block) RErrorChannel() <-chan error {
 	return self.ec.RErrorChannel()
 }
 
+func (self *Block) Parent(ctx context.Context, lookup IBlockLookup) (IBlock, error) {
+	return lookup.GetBlockByHash(ctx, self.parent_hash)
+}
+
+func (self *Block) ParentHash() string {
+	return self.parent_hash
+}
+
 func (self *Block) Encode() io.Reader {
 	pipe_reader, pipe_writer := io.Pipe()
 	error_channel := self.ec.ErrorChannel()
@@ -187,6 +195,7 @@ func (self *Block) Encode() io.Reader {
 		defer pipe_writer.Close()
 		defer close(error_channel)
 
+		// First marshal the block data to BSON
 		encode_data := map[string]interface{}{
 			"i": self.id,
 			"h": self.hash,
@@ -194,24 +203,21 @@ func (self *Block) Encode() io.Reader {
 			"p": self.parent_hash,
 		}
 
-		// Encode block data
-		data, err := bson.Marshal(encode_data)
+		bsonData, err := bson.Marshal(encode_data)
 		if err != nil {
 			error_handling.PipeWriterPanic(true, pipe_writer, error_channel, err)
 			return
 		}
 
-		// Write size prefix
-		size := uint32(len(self.bytes))
-		if err := binary.Write(pipe_writer, binary.LittleEndian, size); err != nil {
+		// Write total block size (size of BSON data)
+		if err := binary.Write(pipe_writer, binary.LittleEndian, uint32(len(bsonData))); err != nil {
 			error_handling.PipeWriterPanic(true, pipe_writer, error_channel,
 				fmt.Errorf("failed to write block size: %w", err))
 			return
 		}
 
-		// Write block data
-		_, err = pipe_writer.Write(data)
-		if err != nil {
+		// Write the BSON data
+		if _, err := pipe_writer.Write(bsonData); err != nil {
 			error_handling.PipeWriterPanic(true, pipe_writer, error_channel, err)
 			return
 		}
@@ -221,20 +227,15 @@ func (self *Block) Encode() io.Reader {
 }
 
 func (self *Block) Decode(r io.Reader) (IBlock, error) {
-	// Read size prefix (uint32)
+	// Read the total block size
 	var size uint32
 	if err := binary.Read(r, binary.LittleEndian, &size); err != nil {
 		return nil, fmt.Errorf("failed to read block size: %w", err)
 	}
 
-	// Check if the size is valid
-	if size == 0 {
-		return nil, fmt.Errorf("invalid block size: %d", size)
-	}
-
-	// Read BSON data
-	data := make([]byte, size)
-	if _, err := io.ReadFull(r, data); err != nil {
+	// Read the complete BSON document
+	bsonData := make([]byte, size)
+	if _, err := io.ReadFull(r, bsonData); err != nil {
 		return nil, fmt.Errorf("failed to read block data: %w", err)
 	}
 
@@ -246,7 +247,7 @@ func (self *Block) Decode(r io.Reader) (IBlock, error) {
 		ParentHash string `bson:"p"`
 	}
 
-	if err := bson.Unmarshal(data, &decoded); err != nil {
+	if err := bson.Unmarshal(bsonData, &decoded); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal block data: %w", err)
 	}
 
@@ -257,12 +258,4 @@ func (self *Block) Decode(r io.Reader) (IBlock, error) {
 		decoded.Bytes,
 		decoded.ParentHash,
 	), nil
-}
-
-func (self *Block) Parent(ctx context.Context, lookup IBlockLookup) (IBlock, error) {
-	return lookup.GetBlockByHash(ctx, self.parent_hash)
-}
-
-func (self *Block) ParentHash() string {
-	return self.parent_hash
 }

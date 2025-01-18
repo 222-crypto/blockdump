@@ -13,6 +13,20 @@ import (
 // BlockSequence implements encoding.SeqEncoder[IBlock] to provide a way to encode and decode
 // sequences of blocks. It handles both the sequential nature of blocks and their
 // encoding/decoding operations while maintaining consistent error handling patterns.
+//
+// For iterating over blocks, use the Seq2() method which provides explicit error handling:
+//
+//	for block, err := range sequence.Seq2() {
+//	    if err != nil {
+//	        // Handle error
+//	        continue
+//	    }
+//	    // Process block
+//	}
+//
+// The error channel (RErrorChannel) is primarily used during encoding operations
+// when streaming blocks to an output. Most users won't need to interact with it
+// directly as WriteEncoder handles this internally.
 type BlockSequence struct {
 	seq iter.Seq2[IBlock, error]
 	ec  error_handling.ErrorChanneler
