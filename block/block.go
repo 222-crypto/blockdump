@@ -230,6 +230,10 @@ func (self *Block) Decode(r io.Reader) (IBlock, error) {
 	// Read total block size
 	var totalSize uint32
 	if err := binary.Read(r, binary.LittleEndian, &totalSize); err != nil {
+		if err == io.EOF {
+			return nil, io.EOF
+		}
+
 		return nil, fmt.Errorf("failed to read block size: %w", err)
 	}
 
