@@ -51,7 +51,8 @@ if [[ $? -eq 0 ]]; then
     
     if [[ ":$PATH:" != *":$_blockdump_dir:"* ]]; then
         export PATH="$_blockdump_dir:$PATH"
-        echo "Added blockdump directory to PATH: $_blockdump_dir" >&2
+        # echo "Added blockdump directory to PATH: $_blockdump_dir" >&2
+        true
     fi
 else
     echo "Warning: Could not locate blockdump binary directory" >&2
@@ -151,7 +152,8 @@ compdef _blockdump blockdump
 
 # Verify that everything is set up correctly
 if command -v blockdump >/dev/null 2>&1; then
-    echo "blockdump is now available in your PATH and completions are configured" >&2
+    # echo "blockdump is now available in your PATH and completions are configured" >&2
+    true
 else
     echo "Warning: blockdump command not found in PATH despite setup attempts" >&2
     return 1
