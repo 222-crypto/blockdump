@@ -191,5 +191,47 @@ func main() {
 
 This example shows how to work with previously saved block data files:
 ```go
-# TODO
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/222-crypto/blockdump/v2/block"
+)
+
+func main() {
+	// Load the block sequence from file
+	blocks, err := block.BlockSequenceFromFile("saved_blocks.dat")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to decode block sequence: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Summary variables
+	var totalBlocks int
+	var totalSize int64
+
+	// Loop through the blocks in the sequence
+	for block, err := range blocks.Seq2() {
+		if err != nil {
+			// Report the error and continue
+			fmt.Fprintf(os.Stderr, "Error processing block: %v\n", err)
+			continue
+			// could also break here if you want to stop processing on any error
+		}
+
+		totalBlocks++
+		size := len(block.Bytes())
+		totalSize += int64(size)
+		fmt.Printf("Block %d: hash=%s, size=%d bytes\n",
+			block.ID(), block.Hash(), size)
+	}
+
+	// Only print summary if we successfully processed some blocks
+	if totalBlocks > 0 {
+		fmt.Printf("\nProcessed %d blocks, total size: %d bytes\n",
+			totalBlocks, totalSize)
+	}
+}
 ```
