@@ -2,9 +2,11 @@ package block
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"iter"
+	"os"
 
 	"github.com/222-crypto/blockdump/v2/encoding"
 	"github.com/222-crypto/blockdump/v2/error_handling"
@@ -162,4 +164,104 @@ func (self *BlockSequence) Decode(r io.Reader) (encoding.SeqEncoder[IBlock], err
 
 	// Create and return a new BlockSequence with the decoded blocks
 	return NewBlockSequenceEncoding(blockSeq), nil
+}
+
+// BlockSequenceFromReader creates a new BlockSequence by decoding BSON-encoded blocks
+// from an io.Reader source. This function serves as the foundation for creating block
+// sequences, with other functions like BlockSequenceFromFile building upon it.
+//
+// The function accepts any io.Reader that provides BSON-encoded block data matching
+// the Block structure's expected encoding. Processing is done sequentially, allowing
+// for efficient streaming of large datasets with memory usage that scales with
+// individual block size rather than total sequence size.
+//
+// Error handling preserves the full context through error wrapping, allowing for
+// effective debugging while maintaining the original error information. The function
+// returns immediately on decode failures to prevent corrupt data processing.
+//
+// The returned sequence encoder is not thread-safe - concurrent access should be
+// synchronized by the caller if needed.
+//
+// Parameters:
+//   - reader: io.Reader - Any reader providing BSON-encoded block data
+//
+// Returns:
+//   - encoding.SeqEncoder[IBlock] - A sequence encoder for accessing the decoded blocks
+//   - error - Any error encountered during the decoding process
+//
+// Usage Example:
+//
+//	sequence, err := BlockSequenceFromReader(networkReader)
+//	if err != nil {
+//	    log.Fatalf("Failed to create sequence: %v", err)
+//	}
+//	for block, err := range sequence.Seq2() {
+//	    if err != nil {
+//	        log.Printf("Block error: %v", err)
+//	        continue
+//	    }
+//	    // Process block
+//	}
+func BlockSequenceFromReader(reader io.Reader) (encoding.SeqEncoder[IBlock], error) {
+	// Create a block sequence
+	blockSeq := &BlockSequence{}
+
+	// Decode the block sequence
+	sequence, err := blockSeq.Decode(reader)
+	if err != nil {
+		return nil, fmt.Errorf("[BlockSequenceFromReader(%v)] failed to decode block sequence: %w", reader, err)
+	}
+
+	return sequence, nil
+}
+
+// BlockSequenceFromFile creates a new BlockSequence by reading and decoding blocks from
+// a file containing BSON-encoded block data. This implementation loads the entire file
+// into memory before decoding, trading increased memory usage for reduced I/O operations.
+//
+// The function uses bytes.Reader for efficient in-memory reading after loading the file.
+// Memory usage will be approximately the size of the input file, making this approach
+// unsuitable for files larger than available RAM.
+//
+// Parameters:
+//   - filename: string - Path to the file containing BSON-encoded block data
+//
+// Returns:
+//   - encoding.SeqEncoder[IBlock] - A sequence encoder for accessing the decoded blocks
+//   - error - Any error encountered during file operations or decoding
+//
+// Usage Example:
+//
+//	sequence, err := BlockSequenceFromFile("blocks.dat")
+//	if err != nil {
+//	    log.Fatalf("Failed to load blocks: %v", err)
+//	}
+//	for block, err := range sequence.Seq2() {
+//	    if err != nil {
+//	        log.Printf("Block error: %v", err)
+//	        continue
+//	    }
+//	    // Process block
+//	}
+func BlockSequenceFromFile(filename string) (encoding.SeqEncoder[IBlock], error) {
+	// Open the block data file
+	blockFile, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("[BlockSequenceFromFile(%s)] failed to open block file: %w", filename, err)
+	}
+	defer blockFile.Close()
+
+	// Read the entire file into a buffer
+	fileContents, err := io.ReadAll(blockFile)
+	if err != nil {
+		return nil, fmt.Errorf("[BlockSequenceFromFile(%s)] failed to read file contents: %w", filename, err)
+	}
+
+	// Create and decode the block sequence using our buffered data
+	sequence, err := BlockSequenceFromReader(bytes.NewReader(fileContents))
+	if err != nil {
+		return nil, fmt.Errorf("[BlockSequenceFromFile(%s)] failed to decode block sequence: %w", filename, err)
+	}
+
+	return sequence, nil
 }
